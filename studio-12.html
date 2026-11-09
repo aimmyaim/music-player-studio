@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Music Player Studio 12.0</title>
+<title>Music Player Studio 12.1</title>
 
 <style>
 :root{
@@ -507,7 +507,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
     <div class="brand-mark">♫</div>
     <div>
       Music Player Studio
-      <div class="version">VERSION 12.0 • WAVEFORM MOTION STUDIO</div>
+      <div class="version">VERSION 12.1 • WAVEFORM MOTION STUDIO</div>
     </div>
   </div>
   <button class="button purple" id="topExport">Export video</button>
@@ -1946,7 +1946,7 @@ async function exportVideo(){
   }
   const duration=audio.duration;
   let drawRequest=null,renderBusy=false,lastFrameTime=0;
-  const captureFPS=Math.min(s.fps,12); // html2canvas is expensive; MediaRecorder still encodes at 30fps
+  const captureFPS=Math.min(s.fps,24); // practical DOM capture ceiling
   async function render(){
    if(renderBusy)return;
    renderBusy=true;
@@ -1957,7 +1957,7 @@ async function exportVideo(){
    /* Render at 3x CSS resolution for crisp text/art, then scale by CSS
       dimensions (not bitmap dimensions) to avoid accidental downscaling. */
    const shot=await window.html2canvas(player,{
-    backgroundColor:null,scale:3,useCORS:true,logging:false,
+    backgroundColor:null,scale:2,useCORS:true,logging:false,
     width:box.width,height:box.height
    });
    ctx.fillStyle=s.exportBackground==='green'?'#00d000':s.exportBackground==='black'?'#000000':s.stageColor;
