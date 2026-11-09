@@ -1288,16 +1288,36 @@ audio.onended=()=>{
 
 /* FILE UPLOADS */
 $('audioInput').onchange=e=>{
- const file=e.target.files[0];
+ const file=e.target.files?.[0];
  if(!file)return;
 
+ pauseAudio();
  if(audioURL)URL.revokeObjectURL(audioURL);
 
  audioURL=URL.createObjectURL(file);
+ audio.removeAttribute('src');
  audio.src=audioURL;
  audio.load();
+ $('playbackStatus').textContent='Loading audio…';
+ $('exportStatus').textContent='Audio selected: '+file.name;
 
- resetAudio();
+ const loaded=()=>{
+  audio.removeEventListener('loadedmetadata',loaded);
+  if(!Number.isFinite(audio.duration)||audio.duration<=0){
+   $('playbackStatus').textContent='Audio loaded, but duration is unavailable';
+   return;
+  }
+  audio.currentTime=0;
+  playIcon(true);
+  $('playControl').textContent='▶ Play';
+  $('playbackStatus').textContent='Ready · '+formatTime(audio.duration);
+  updatePlayback();
+ };
+ audio.addEventListener('loadedmetadata',loaded);
+ audio.addEventListener('error',()=>{
+  $('playbackStatus').textContent='Audio load failed';
+  $('exportStatus').textContent='Could not decode this audio file. Try MP3 or WAV.';
+ },{once:true});
 };
 
 $('coverInput').onchange=e=>{
