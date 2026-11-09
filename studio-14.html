@@ -2198,6 +2198,7 @@ async function exportVideo(){
   savedVisualNodes.forEach((node,i)=>node.style.visibility=savedVisibility[i]);
   $('playIcon').innerHTML=savedPlayIcon;
   if(captureStyle)captureStyle.remove();
+  applyMiniState();
   isExporting=false;
   button.disabled=false;
   button.textContent='Export full animated video';
