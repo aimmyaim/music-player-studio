@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Music Player Studio 8.4</title>
+<title>Music Player Studio 8.5</title>
 
 <style>
 :root{
@@ -496,7 +496,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
  .transport{gap:12px}
 }
 </style>
-<!-- Studio 8.4 deployment refresh: dbf84e1 -->
+<!-- Studio 8.5 deployment refresh: dbf84e1 -->
 </head>
 
 <body>
@@ -506,7 +506,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
     <div class="brand-mark">♫</div>
     <div>
       Music Player Studio
-      <div class="version">VERSION 8.4 • WAVEFORM MOTION STUDIO</div>
+      <div class="version">VERSION 8.5 • WAVEFORM MOTION STUDIO</div>
     </div>
   </div>
   <button class="button purple" id="topExport">Export video</button>
@@ -821,9 +821,8 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
     <div class="field">
       <label>Video format</label>
       <select id="formatSelect">
-        <option value="mp4">MP4 • H.264</option>
-        <option value="mov">MOV • QuickTime</option>
-        <option value="webm">WebM</option>
+        <option value="webm">WebM • Native</option>
+        <option value="mp4">MP4 • Native (if supported)</option>
       </select>
     </div>
 
@@ -851,7 +850,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
     </button>
 
     <p class="note" id="exportStatus">
-      MP4 and MOV conversion uses FFmpeg. First export requires an internet connection.
+      Exports use your browser directly—no FFmpeg download required. MP4 depends on browser support.
     </p>
   </div>
 
@@ -1894,18 +1893,13 @@ async function exportVideo(){
    stream.addTrack(track);
   });
 
-  const mimeTypes=[
-   'video/webm;codecs=vp9,opus',
-   'video/webm;codecs=vp8,opus',
-   'video/webm'
-  ];
+  const mimeTypes=s.format==='mp4'
+   ?['video/mp4;codecs=avc1.42E01E','video/mp4']
+   :['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
 
-  const mimeType=mimeTypes.find(
-   type=>MediaRecorder.isTypeSupported(type)
-  );
-
+  const mimeType=mimeTypes.find(type=>MediaRecorder.isTypeSupported(type));
   if(!mimeType){
-   throw new Error('This browser cannot record the required video format.');
+   throw new Error(s.format.toUpperCase()+' recording is not supported by this browser. Choose WebM instead.');
   }
 
   recorder=new MediaRecorder(stream,{
@@ -1972,86 +1966,9 @@ async function exportVideo(){
   cancelAnimationFrame(drawRequest);
   audio.pause();
 
-  if(s.format==='webm'){
-   downloadBlob(webmBlob,'music-player-studio.webm');
-   $('exportStatus').textContent='WebM export complete.';
-   return;
-  }
-
-  $('exportStatus').textContent='Loading FFmpeg conversion engine...';
-  button.textContent='Loading FFmpeg...';
-
-  const {FFmpeg}=await import(
-   'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js'
-  );
-
-  const {toBlobURL}=await import(
-   'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js'
-  );
-
-  ffmpeg=new FFmpeg();
-
-  const core='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
-   const ffmpegPackage='https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm';
-
-   /* Use explicit cross-origin isolation-safe Blob URLs for FFmpeg core,
-      while preserving the official worker module. */
-   const workerBootstrap=`import "${ffmpegPackage}/worker.js";`;
-   ffmpegClassWorkerURL=URL.createObjectURL(
-    new Blob([workerBootstrap],{type:'text/javascript'})
-   );
-
-   const [coreJsResponse,coreWasmResponse]=await Promise.all([
-    fetch(core+'/ffmpeg-core.js'),
-    fetch(core+'/ffmpeg-core.wasm')
-   ]);
-   if(!coreJsResponse.ok) throw new Error('FFmpeg core JS download failed: HTTP '+coreJsResponse.status);
-   if(!coreWasmResponse.ok) throw new Error('FFmpeg core WASM download failed: HTTP '+coreWasmResponse.status);
-   const coreJsBlob=await coreJsResponse.blob();
-   const coreWasmBlob=await coreWasmResponse.blob();
-   const coreURL=URL.createObjectURL(new Blob([coreJsBlob],{type:'text/javascript'}));
-   const wasmURL=URL.createObjectURL(new Blob([coreWasmBlob],{type:'application/wasm'}));
-
-   await ffmpeg.load({classWorkerURL:ffmpegClassWorkerURL,coreURL,wasmURL});
-  $('exportStatus').textContent='Converting to '+s.format.toUpperCase()+'...';
-  button.textContent='Converting...';
-
-  await ffmpeg.writeFile(
-   'input.webm',
-   new Uint8Array(await webmBlob.arrayBuffer())
-  );
-
-  const output=s.format==='mov'?'player.mov':'player.mp4';
-
-  await ffmpeg.exec([
-   '-i','input.webm',
-   '-c:v','libx264',
-   '-preset','ultrafast',
-   '-crf','18',
-   '-pix_fmt','yuv420p',
-   '-c:a','aac',
-   '-b:a','192k',
-   '-movflags','+faststart',
-   output
-  ]);
-
-  const result=await ffmpeg.readFile(output);
-
-  const finalBlob=new Blob(
-   [result],
-   {type:s.format==='mov'?'video/quicktime':'video/mp4'}
-  );
-
-  downloadBlob(finalBlob,'music-player-studio.'+s.format);
-
-  $('exportStatus').textContent=s.format.toUpperCase()+' export complete.';
-
-  await ffmpeg.terminate();
-  ffmpeg=null;
-  if(ffmpegClassWorkerURL){
-   URL.revokeObjectURL(ffmpegClassWorkerURL);
-   ffmpegClassWorkerURL=null;
-  }
+  const extension=s.format==='mp4'?'mp4':'webm';
+  downloadBlob(webmBlob,'music-player-studio.'+extension);
+  $('exportStatus').textContent=extension.toUpperCase()+' export complete (browser-native).';
 
  }catch(err){
   console.error('Music Player Studio export failure:',err,err?.stack);
