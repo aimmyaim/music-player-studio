@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Music Player Studio 8.3</title>
+<title>Music Player Studio 8.4</title>
 
 <style>
 :root{
@@ -496,7 +496,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
  .transport{gap:12px}
 }
 </style>
-<!-- Studio 8.3 deployment refresh: dbf84e1 -->
+<!-- Studio 8.4 deployment refresh: dbf84e1 -->
 </head>
 
 <body>
@@ -506,7 +506,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
     <div class="brand-mark">♫</div>
     <div>
       Music Player Studio
-      <div class="version">VERSION 8.3 • WAVEFORM MOTION STUDIO</div>
+      <div class="version">VERSION 8.4 • WAVEFORM MOTION STUDIO</div>
     </div>
   </div>
   <button class="button purple" id="topExport">Export video</button>
@@ -1992,29 +1992,27 @@ async function exportVideo(){
   ffmpeg=new FFmpeg();
 
   const core='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
-  const ffmpegPackage='https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm';
+   const ffmpegPackage='https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm';
 
-  /*   * When this HTML is opened directly from disk (file://), its origin is
-   * "null". FFmpeg's default worker URL points back to unpkg, and browsers
-   * reject a cross-origin Worker constructor from an opaque file origin.
-   * Start a same-origin Blob module worker instead, then have that worker
-   * import FFmpeg's official worker module from the CDN.
-   */
-  const workerBootstrap=`import "${ffmpegPackage}/worker.js";`;
-  ffmpegClassWorkerURL=URL.createObjectURL(
-   new Blob([workerBootstrap],{type:'text/javascript'})
-  );
+   /* Use explicit cross-origin isolation-safe Blob URLs for FFmpeg core,
+      while preserving the official worker module. */
+   const workerBootstrap=`import "${ffmpegPackage}/worker.js";`;
+   ffmpegClassWorkerURL=URL.createObjectURL(
+    new Blob([workerBootstrap],{type:'text/javascript'})
+   );
 
-  await ffmpeg.load({
-   classWorkerURL:ffmpegClassWorkerURL,
-   coreURL:await toBlobURL(
-    core+'/ffmpeg-core.js','text/javascript'
-   ),
-   wasmURL:await toBlobURL(
-    core+'/ffmpeg-core.wasm','application/wasm'
-   )
-  });
+   const [coreJsResponse,coreWasmResponse]=await Promise.all([
+    fetch(core+'/ffmpeg-core.js'),
+    fetch(core+'/ffmpeg-core.wasm')
+   ]);
+   if(!coreJsResponse.ok) throw new Error('FFmpeg core JS download failed: HTTP '+coreJsResponse.status);
+   if(!coreWasmResponse.ok) throw new Error('FFmpeg core WASM download failed: HTTP '+coreWasmResponse.status);
+   const coreJsBlob=await coreJsResponse.blob();
+   const coreWasmBlob=await coreWasmResponse.blob();
+   const coreURL=URL.createObjectURL(new Blob([coreJsBlob],{type:'text/javascript'}));
+   const wasmURL=URL.createObjectURL(new Blob([coreWasmBlob],{type:'application/wasm'}));
 
+   await ffmpeg.load({classWorkerURL:ffmpegClassWorkerURL,coreURL,wasmURL});
   $('exportStatus').textContent='Converting to '+s.format.toUpperCase()+'...';
   button.textContent='Converting...';
 
