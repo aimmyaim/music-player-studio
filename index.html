@@ -1982,17 +1982,17 @@ async function exportVideo(){
   button.textContent='Loading FFmpeg...';
 
   const {FFmpeg}=await import(
-   'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js'
+   'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js'
   );
 
   const {toBlobURL}=await import(
-   'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js'
+   'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js'
   );
 
   ffmpeg=new FFmpeg();
 
-  const core='https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-  const ffmpegPackage='https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm';
+  const core='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
+  const ffmpegPackage='https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm';
 
   /*   * When this HTML is opened directly from disk (file://), its origin is
    * "null". FFmpeg's default worker URL points back to unpkg, and browsers
