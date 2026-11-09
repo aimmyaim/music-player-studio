@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Music Player Studio 11.1</title>
+<title>Music Player Studio 11.2</title>
 
 <style>
 :root{
@@ -507,7 +507,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
     <div class="brand-mark">♫</div>
     <div>
       Music Player Studio
-      <div class="version">VERSION 11.1 • WAVEFORM MOTION STUDIO</div>
+      <div class="version">VERSION 11.2 • WAVEFORM MOTION STUDIO</div>
     </div>
   </div>
   <button class="button purple" id="topExport">Export video</button>
@@ -1418,16 +1418,8 @@ settingIds.forEach(id=>{
  $(id).addEventListener('change',applySettings);
 });
 
-/* PREVIEW RATIO */
-$('previewRatio').onchange=()=>{
- stage.className='stage';
-
- 
- const percent=clamp((e.clientX-rect.left)/rect.width,0,1);
-
- audio.currentTime=percent*audio.duration;
- updatePlayback();
-};
+/* PORTRAIT PREVIEW — fixed 9:16 */
+stage.classList.add('ratio-portrait');
 
 /* REPLAY ANIMATION */
 $('previewAnimation').onclick=()=>{
