@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Music Player Studio 10.0</title>
+<title>Music Player Studio 10.1</title>
 
 <style>
 :root{
@@ -496,7 +496,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
  .transport{gap:12px}
 }
 </style>
-<!-- Studio 10.0 experimental Canvas export renderer -->
+<!-- Studio 10.1 experimental Canvas export renderer -->
 </head>
 
 <body>
@@ -506,7 +506,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
     <div class="brand-mark">♫</div>
     <div>
       Music Player Studio
-      <div class="version">VERSION 10.0 • WAVEFORM MOTION STUDIO</div>
+      <div class="version">VERSION 10.1 • WAVEFORM MOTION STUDIO</div>
     </div>
   </div>
   <button class="button purple" id="topExport">Export video</button>
@@ -1940,7 +1940,7 @@ async function exportVideo(){
      const liveLevels=smoothLevels();
      const morph=animationProgress();
      drawCanvasFrame(ctx,cw,ch,t,duration,s,liveLevels,coverImage,morph);
-    }catch(e){frameError=e;console.error('Studio 10 frame render:',e);recorder.stop();return;}
+    }catch(e){frameError=e;console.error('Studio 10.1 frame render:',e);recorder.stop();return;}
    }
    if(!audio.ended&&audio.currentTime<duration){
     drawRequest=requestAnimationFrame(exportFrame);
@@ -1958,7 +1958,8 @@ async function exportVideo(){
   await audio.play();
   drawRequest=requestAnimationFrame(exportFrame);
 
-  const webmBlob=await recorded;\n  if(frameError)throw frameError;
+  const webmBlob=await recorded;
+  if(frameError)throw frameError;
 
   cancelAnimationFrame(drawRequest);
   audio.pause();
