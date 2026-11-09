@@ -2055,9 +2055,12 @@ async function exportVideo(){
   }
 
  }catch(err){
-  console.error(err);
-  $('exportStatus').textContent='Export error: '+err.message;
-  alert('Export failed: '+err.message);
+  console.error('Music Player Studio export failure:',err,err?.stack);
+  const errorText=(err && (err.message||err.name)) ?
+    [err.name,err.message].filter(Boolean).join(': ') :
+    (typeof err==='string'?err:JSON.stringify(err)) || String(err) || 'Unknown export error';
+  $('exportStatus').textContent='Export error: '+errorText;
+  alert('Export failed: '+errorText);
 
   if(recorder&&recorder.state==='recording'){
    recorder.stop();
