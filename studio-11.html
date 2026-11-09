@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Music Player Studio 11.0</title>
+<title>Music Player Studio 11.1</title>
 
 <style>
 :root{
@@ -88,12 +88,13 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
 .preview-controls{display:flex;align-items:center;gap:8px}
 .preview-controls select{width:auto;min-width:105px}
 .stage{
- width:100%;height:560px;display:flex;align-items:center;justify-content:center;
- padding:35px;background:#00d000;border:1px solid #ffffff0d;
+ width:min(100%,430px);aspect-ratio:9/16;height:auto;min-height:0;
+ margin:0 auto;display:flex;align-items:center;justify-content:center;
+ padding:22px;background:#00d000;border:1px solid #ffffff0d;
  border-radius:16px;overflow:hidden;transition:background .25s
 }
-.stage.ratio-portrait{max-width:430px;height:760px;margin:auto}
-.stage.ratio-square{max-width:620px;height:620px;margin:auto}
+.workspace{min-width:0}
+@media(max-height:900px){.stage{max-height:calc(100vh - 150px)}}
 
 /* PLAYER FOUNDATION */
 .player{
@@ -506,7 +507,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
     <div class="brand-mark">♫</div>
     <div>
       Music Player Studio
-      <div class="version">VERSION 11.0 • WAVEFORM MOTION STUDIO</div>
+      <div class="version">VERSION 11.1 • WAVEFORM MOTION STUDIO</div>
     </div>
   </div>
   <button class="button purple" id="topExport">Export video</button>
@@ -827,17 +828,12 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
     </div>
 
     <div class="field">
-      <label>Resolution / aspect ratio</label>
-      <select id="resolution">
-        <option value="1920x1080">1920 × 1080 • Landscape</option>
-        <option value="1080x1920">1080 × 1920 • Portrait</option>
-        <option value="1080x1080">1080 × 1080 • Square</option>
-        <option value="1280x720">1280 × 720 • HD</option>
-      </select>
+      <label>Portrait resolution</label><select id="resolution"><option value="720x1280">720 × 1280 • HD</option><option value="1080x1920" selected>1080 × 1920 • Full HD</option><option value="1440x2560">1440 × 2560 • 2K</option><option value="2160x3840">2160 × 3840 • 4K</option></select>
     </div>
 
-    <div class="field">
-      <label>Export background</label>
+    <div class="field"><label>Render frame rate</label><select id="fpsSelect"><option value="24">24 FPS • Cinematic</option><option value="30" selected>30 FPS • Standard</option><option value="60">60 FPS • Smooth</option></select></div>
+    <div class="field"><label>Video quality</label><select id="qualitySelect"><option value="8000000">Low • 8 Mbps</option><option value="16000000">Medium • 16 Mbps</option><option value="25000000" selected>High • 25 Mbps</option><option value="40000000">Ultra • 40 Mbps</option></select></div>
+    <div class="field"><label>Export background</label>
       <select id="exportBackground">
         <option value="green">Green screen</option>
         <option value="black">Black</option>
@@ -863,13 +859,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
       <div class="workspace-title">Live preview</div>
       <div class="workspace-description">Your changes appear here in real time.</div>
     </div>
-    <div class="preview-controls">
-      <select id="previewRatio">
-        <option value="landscape">16:9 Preview</option>
-        <option value="portrait">9:16 Preview</option>
-        <option value="square">1:1 Preview</option>
-      </select>
-    </div>
+    <div class="preview-controls"><span class="note">PORTRAIT · 9:16</span></div>
   </div>
 
   <div class="stage" id="stage">
@@ -1026,7 +1016,9 @@ function getSettings(){
 
   exportBackground:$('exportBackground').value,
   resolution:$('resolution').value,
-  format:$('formatSelect').value
+  format:$('formatSelect').value,
+  fps:+$('fpsSelect').value,
+  bitrate:+$('qualitySelect').value
  };
 }
 
@@ -1430,16 +1422,7 @@ settingIds.forEach(id=>{
 $('previewRatio').onchange=()=>{
  stage.className='stage';
 
- const ratio=$('previewRatio').value;
-
- if(ratio==='portrait')stage.classList.add('ratio-portrait');
- if(ratio==='square')stage.classList.add('ratio-square');
-};
-
-$('progressTrack').onclick=e=>{
- if(!audio.duration)return;
-
- const rect=$('progressTrack').getBoundingClientRect();
+ 
  const percent=clamp((e.clientX-rect.left)/rect.width,0,1);
 
  audio.currentTime=percent*audio.duration;
@@ -1619,16 +1602,16 @@ function drawCanvasFrame(ctx,cw,ch,t,duration,s,levels,art,morph){
  }[s.miniSize]||1;
  const sizeFactor=mix(mainSizeFactor,miniSizeFactor,morph);
 
- const landscape=cw>=ch;
+ const landscape=false;
 
- let baseW=Math.min(cw*.86,landscape?1450:920);
- let miniW=Math.min(cw*.73,landscape?930:800);
+ let baseW=Math.min(cw*.86,920);
+ let miniW=Math.min(cw*.73,800);
 
  const cardW=mix(baseW,miniW,morph);
 
  const baseH=vertical
   ?Math.min(ch*.83,1000)
-  :landscape?435:520;
+  :520;
 
  const cardH=mix(baseH,230,morph);
 
@@ -1907,7 +1890,7 @@ async function exportVideo(){
   canvas.height=ch;
 
   const ctx=canvas.getContext('2d');
-  stream=canvas.captureStream(30);
+  stream=canvas.captureStream(s.fps);
 
   const destination=audioContext.createMediaStreamDestination();
   analyser.connect(destination);
@@ -1918,7 +1901,7 @@ async function exportVideo(){
    :['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
   const mimeType=mimeTypes.find(type=>MediaRecorder.isTypeSupported(type));
   if(!mimeType)throw new Error(s.format.toUpperCase()+' recording is not supported. Choose WebM.');
-  recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:25000000,audioBitsPerSecond:192000});
+  recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:s.bitrate,audioBitsPerSecond:192000});
   const chunks=[];
   const recorded=new Promise((resolve,reject)=>{
    recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
@@ -1933,7 +1916,7 @@ async function exportVideo(){
   let drawRequest=null;
   let lastDraw=0;
   let frameError=null;
-  const exportFPS=24;
+  const exportFPS=s.fps;
   const exportFrame=now=>{
    if(recorder.state!=='recording')return;
    if(now-lastDraw>=1000/exportFPS){
