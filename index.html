@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Music Player Studio 9.1</title>
+<title>Music Player Studio 10.0</title>
 
 <style>
 :root{
@@ -496,7 +496,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
  .transport{gap:12px}
 }
 </style>
-<!-- Studio 9.1 deployment refresh: dbf84e1 -->
+<!-- Studio 10.0 deployment refresh: dbf84e1 -->
 </head>
 
 <body>
@@ -506,7 +506,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:#917aff}
     <div class="brand-mark">♫</div>
     <div>
       Music Player Studio
-      <div class="version">VERSION 9.1 • WAVEFORM MOTION STUDIO</div>
+      <div class="version">VERSION 10.0 • WAVEFORM MOTION STUDIO</div>
     </div>
   </div>
   <button class="button purple" id="topExport">Export video</button>
@@ -1903,47 +1903,39 @@ async function exportVideo(){
    recorder.onstop=()=>resolve(new Blob(chunks,{type:mimeType}));
   });
 
-  /* Studio 9 captures the REAL HTML player with html2canvas, not a
-     hand-drawn approximation. Styles, artwork, typography and layout come
-     directly from the preview DOM. */
-  if(!window.html2canvas){
-   await new Promise((resolve,reject)=>{
-    const script=document.createElement('script');
-    script.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-    script.onload=resolve;script.onerror=()=>reject(new Error('Could not load HTML capture engine. Check internet/CDN access.'));
-    document.head.appendChild(script);
-   });
-  }
+  /* Studio 10: dedicated real-time Canvas renderer.
+     No DOM screenshots or html2canvas work during playback. */
   const duration=audio.duration;
-  let drawRequest=null,renderBusy=false,lastFrameTime=0;
-  const captureFPS=12; // html2canvas is expensive; MediaRecorder still encodes at 30fps
-  async function render(){
-   if(renderBusy)return;
-   renderBusy=true;
-   const t=audio.currentTime;
-   const mini=s.autoCollapse&&t>=s.delay;
-   player.classList.toggle('is-mini',mini);
-   const box=player.getBoundingClientRect();
-   /* Render at 3x CSS resolution for crisp text/art, then scale by CSS
-      dimensions (not bitmap dimensions) to avoid accidental downscaling. */
-   const shot=await window.html2canvas(player,{
-    backgroundColor:null,scale:3,useCORS:true,logging:false,
-    width:box.width,height:box.height
-   });
-   ctx.fillStyle=s.exportBackground==='green'?'#00d000':s.exportBackground==='black'?'#000000':s.stageColor;
-   ctx.fillRect(0,0,cw,ch);
-   const maxW=cw*.88,maxH=ch*.88;
-   const fit=Math.min(maxW/box.width,maxH/box.height);
-   const dw=box.width*fit,dh=box.height*fit;
-   ctx.imageSmoothingEnabled=true;
-   ctx.imageSmoothingQuality='high';
-   ctx.drawImage(shot,(cw-dw)/2,(ch-dh)/2,dw,dh);
-   renderBusy=false;
-   if(!audio.ended&&t<duration){
-    drawRequest=setTimeout(render,1000/captureFPS);
-   }else if(recorder.state==='recording')recorder.stop();
-  }
+  let drawRequest=null;
+  const captureFPS=60;
+  const videoTrack=canvas.captureStream(captureFPS);
+  stream=videoTrack;
+  const destination=audioContext.createMediaStreamDestination();
+  analyser.connect(destination);
+  destination.stream.getAudioTracks().forEach(track=>stream.addTrack(track));
 
+  const mimeTypes=s.format==='mp4'
+   ?['video/mp4;codecs=avc1.42E01E','video/mp4']
+   :['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  const mimeType=mimeTypes.find(type=>MediaRecorder.isTypeSupported(type));
+  if(!mimeType)throw new Error(s.format.toUpperCase()+' recording is not supported. Choose WebM.');
+  recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:35000000,audioBitsPerSecond:256000});
+  const chunks=[];
+  const recorded=new Promise((resolve,reject)=>{
+   recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+   recorder.onerror=e=>reject(e.error||new Error('Recording failed.'));
+   recorder.onstop=()=>resolve(new Blob(chunks,{type:mimeType}));
+  });
+
+  function render(){
+   const t=audio.currentTime;
+   const levels=smoothLevels();
+   const morph=s.autoCollapse?ease(clamp((t-s.delay)/Math.max(.001,s.animDuration),0,1)):0;
+   const exportSettings={...s,layoutX:'center',layoutY:'center'};
+   drawCanvasFrame(ctx,cw,ch,t,duration,exportSettings,levels,coverImage,morph);
+   if(!audio.ended&&t<duration)drawRequest=requestAnimationFrame(render);
+   else if(recorder.state==='recording')recorder.stop();
+  }
 
   $('exportStatus').textContent='Recording the song and animated player...';
   button.textContent='Recording...';
@@ -1952,11 +1944,11 @@ async function exportVideo(){
   recordingStarted=true;
 
   await audio.play();
-  await render();
+  render();
 
   const webmBlob=await recorded;
 
-  clearTimeout(drawRequest);
+  cancelAnimationFrame(drawRequest);
   audio.pause();
 
   const extension=s.format==='mp4'?'mp4':'webm';
