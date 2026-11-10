@@ -997,7 +997,8 @@ a.button{display:flex;align-items:center;justify-content:center;text-decoration:
 
     <div class="export-progress" id="exportProgress" hidden>
       <div class="export-progress-bar"><div class="export-progress-fill" id="exportProgressFill"></div></div>
-      <div class="export-progress-text" id="exportProgressText">Preparingâ€¦</div>    </div>
+      <div class="export-progress-text" id="exportProgressText">Preparingâ€¦</div>
+    </div>
 
     <p class="note" id="exportStatus" style="margin-top:10px">
       The video is recorded from the exact preview design. Keep this tab visible while exporting.
@@ -1996,6 +1997,7 @@ function mixRect(a, b, t) {
     h: mix(a.h, b.h, t)
   };
 }
+
 function mixPadding(a, b, t) {
   return [
     mix(a.paddingTop, b.paddingTop, t),
@@ -2996,6 +2998,7 @@ $('coverInput').addEventListener('change', e => {
 
 /* ---------- seeking ---------- */
 let seeking = false;
+
 function seekToClientX(clientX) {
   const rect = progressTrack.getBoundingClientRect();
   if (!rect.width || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
